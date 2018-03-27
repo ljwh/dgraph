@@ -20,6 +20,7 @@ package posting
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"math"
 	"sort"
 	"strconv"
@@ -37,7 +38,7 @@ import (
 var (
 	ErrTsTooOld = x.Errorf("Transaction is too old")
 	txns        *transactions
-	txnMarks    *x.WaterMark // Used to find out till what RAFT index we can snapshot entries.
+	txnMarks    *x.WaterMark // Used to find out till which index we can snapshot.
 )
 
 func init() {
@@ -115,6 +116,13 @@ func (t *transactions) TxnsSinceSnapshot(pending uint64) []uint64 {
 			timestamps = append(timestamps, txn.StartTs)
 		}
 	}
+	sort.Slice(timestamps, func(i, j int) bool {
+		return timestamps[i] < timestamps[j]
+	})
+
+	for i := 0; i < len(timestamps); i++ {
+		fmt.Printf("last ts: %+v, idx: %+v\n", timestamps[i], t.m[timestamps[i]].startIdx())
+	}
 	return timestamps
 }
 
@@ -172,6 +180,7 @@ func (t *transactions) Done(startTs uint64) {
 	}
 	txn.done()
 	delete(t.m, startTs)
+	x.Println("Done txn: ", startTs)
 }
 
 func (t *Txn) done() {
@@ -198,10 +207,12 @@ func (t *transactions) PutOrMergeIndex(src *Txn) *Txn {
 	dst := t.m[src.StartTs]
 	if dst == nil {
 		t.m[src.StartTs] = src
+		x.Printf("src: %+v\n", src)
 		return src
 	}
 	x.AssertTrue(src.StartTs == dst.StartTs)
 	dst.Indices = append(dst.Indices, src.Indices...)
+	x.Printf("dst: %+v\n", dst)
 	return dst
 }
 
