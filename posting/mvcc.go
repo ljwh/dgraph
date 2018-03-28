@@ -180,7 +180,6 @@ func (t *transactions) Done(startTs uint64) {
 	}
 	txn.done()
 	delete(t.m, startTs)
-	x.Println("Done txn: ", startTs)
 }
 
 func (t *Txn) done() {
@@ -188,6 +187,7 @@ func (t *Txn) done() {
 	defer t.Unlock()
 	// All indices should have been added by now.
 	TxnMarks().DoneMany(t.Indices)
+	x.Println("Done: ", t.StartTs, ", indices:", t.Indices)
 }
 
 // LastIndex returns the index of last prewrite proposal associated with

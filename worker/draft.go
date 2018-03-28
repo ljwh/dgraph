@@ -349,6 +349,8 @@ func (n *node) processApplyCh() {
 	kvChan := make(chan KeyValueOrCleanProposal, 1000)
 	go n.processKeyValueOrCleanProposals(kvChan)
 
+	//	f, err := os.Create("proposal.txt")
+	//	x.Check(err)
 	for e := range n.applyCh {
 		if len(e.Data) == 0 {
 			// This is not in the proposal map
@@ -368,6 +370,9 @@ func (n *node) processApplyCh() {
 			x.Fatalf("Unable to unmarshal proposal: %v %q\n", err, e.Data)
 		}
 
+		if proposal.Mutations != nil {
+			//			f.WriteString(fmt.Sprintf("pid: [%v], count: [%+v]\n", proposal.Id, len(proposal.Mutations.Edges)))
+		}
 		// One final applied and synced watermark would be emitted when proposal ctx ref count
 		// becomes zero.
 		pctx := n.props.pctx(proposal.Id)
@@ -670,6 +675,7 @@ func (n *node) snapshot(skip uint64) {
 	x.Checkf(err, "Unable to get existing snapshot")
 
 	lastSnapshotIdx := existing.Metadata.Index
+	x.Printf("In snapshot, txn: [%v], lastSnapshot: [%v], applied: [%v]\n", txnWatermark, lastSnapshotIdx, n.Applied.DoneUntil())
 	if txnWatermark <= lastSnapshotIdx+skip {
 		appliedWatermark := n.Applied.DoneUntil()
 		// If difference grows above 1.5 * ForceAbortDifference we try to abort old transactions

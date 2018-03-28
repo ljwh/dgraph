@@ -209,9 +209,11 @@ func (o *Oracle) updateCommitStatusHelper(index uint64, src *api.TxnContext) boo
 	o.Lock()
 	defer o.Unlock()
 	if _, ok := o.commits[src.StartTs]; ok {
+		x.Printf("return false commits: [%v]\n", src.StartTs)
 		return false
 	}
 	if _, ok := o.aborts[src.StartTs]; ok {
+		x.Printf("return false aborts: [%v]\n", src.StartTs)
 		return false
 	}
 	if src.Aborted {
@@ -219,12 +221,14 @@ func (o *Oracle) updateCommitStatusHelper(index uint64, src *api.TxnContext) boo
 	} else {
 		o.commits[src.StartTs] = src.CommitTs
 	}
+
 	o.syncMarks = append(o.syncMarks, syncMark{index: index, ts: src.StartTs})
 	return true
 }
 
 func (o *Oracle) updateCommitStatus(index uint64, src *api.TxnContext) {
 	if o.updateCommitStatusHelper(index, src) {
+		x.Printf("add to Delta: [%v]", src)
 		delta := new(intern.OracleDelta)
 		if src.Aborted {
 			delta.Aborts = append(delta.Aborts, src.StartTs)
