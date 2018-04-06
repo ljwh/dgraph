@@ -177,7 +177,7 @@ func (t *Txn) done() {
 	defer t.Unlock()
 	// All indices should have been added by now.
 	TxnMarks().DoneMany(t.Indices)
-	x.Write(fmt.Sprintf("Done: ", t.StartTs, ", indices:", t.Indices))
+	x.Write(fmt.Sprintln("Done: ", t.StartTs, ", indices:", t.Indices))
 }
 
 // LastIndex returns the index of last prewrite proposal associated with
@@ -197,12 +197,12 @@ func (t *transactions) PutOrMergeIndex(src *Txn) *Txn {
 	dst := t.m[src.StartTs]
 	if dst == nil {
 		t.m[src.StartTs] = src
-		x.Printf("src: %+v\n", src)
+		x.Write(fmt.Sprintf("src: %+v\n", src))
 		return src
 	}
 	x.AssertTrue(src.StartTs == dst.StartTs)
 	dst.Indices = append(dst.Indices, src.Indices...)
-	x.Printf("dst: %+v\n", dst)
+	x.Write(fmt.Sprintf("dst: %+v\n", dst))
 	return dst
 }
 

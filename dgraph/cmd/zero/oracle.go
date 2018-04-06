@@ -219,7 +219,7 @@ func (o *Oracle) updateCommitStatusHelper(index uint64, src *api.TxnContext) boo
 
 func (o *Oracle) updateCommitStatus(index uint64, src *api.TxnContext) {
 	if o.updateCommitStatusHelper(index, src) {
-		debugLog.WriteString(fmt.Sprintf("add to Delta: [%v]", src))
+		debugLog.WriteString(fmt.Sprintf("add to Delta: [%v]\n", src))
 		delta := new(intern.OracleDelta)
 		if src.Aborted {
 			delta.Aborts = append(delta.Aborts, src.StartTs)
