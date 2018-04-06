@@ -18,6 +18,7 @@
 package worker
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math/rand"
@@ -123,6 +124,9 @@ func (p *proposals) Has(pid uint32) bool {
 type node struct {
 	*conn.Node
 
+	// Changed after init but not protected by SafeMutex
+	requestCh chan linReadReq
+
 	// Fields which are never changed after init.
 	applyCh chan raftpb.Entry
 	ctx     context.Context
@@ -133,6 +137,22 @@ type node struct {
 
 	canCampaign bool
 	sch         *scheduler
+	rand        *rand.Rand
+}
+
+func (n *node) WaitForMinProposal(ctx context.Context, read *api.LinRead) error {
+	if read == nil {
+		return nil
+	}
+	if read.Sequencing == api.LinRead_SERVER_SIDE {
+		return n.WaitLinearizableRead(ctx)
+	}
+	if read.Ids == nil {
+		return nil
+	}
+	gid := n.RaftContext.Group
+	min := read.Ids[gid]
+	return n.Applied.WaitForMark(ctx, min)
 }
 
 func newNode(gid uint32, id uint64, myAddr string) *node {
@@ -149,9 +169,10 @@ func newNode(gid uint32, id uint64, myAddr string) *node {
 	}
 
 	n := &node{
-		Node: m,
-		ctx:  context.Background(),
-		gid:  gid,
+		Node:      m,
+		requestCh: make(chan linReadReq),
+		ctx:       context.Background(),
+		gid:       gid,
 		// processConfChange etc are not throttled so some extra delta, so that we don't
 		// block tick when applyCh is full
 		applyCh: make(chan raftpb.Entry, Config.NumPendingProposals+1000),
@@ -159,6 +180,7 @@ func newNode(gid uint32, id uint64, myAddr string) *node {
 		stop:    make(chan struct{}),
 		done:    make(chan struct{}),
 		sch:     new(scheduler),
+		rand:    rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 	n.sch.init(n)
 	return n
@@ -278,6 +300,13 @@ func (n *node) processMutation(task *task) error {
 	}
 	rv := x.RaftValue{Group: n.gid, Index: ridx}
 	ctx = context.WithValue(ctx, "raft", rv)
+
+	// Index updates would be wrong if we don't wait.
+	// Say we do <0x1> <name> "janardhan", <0x1> <name> "pawan",
+	// while applying the second mutation we check the old value
+	// of name and delete it from "janardhan"'s index. If we don't
+	// wait for commit information then mutation won't see the value
+	posting.Oracle().WaitForTs(context.Background(), txn.StartTs)
 	if err := runMutation(ctx, edge, txn); err != nil {
 		if tr, ok := trace.FromContext(ctx); ok {
 			tr.LazyPrintf("process mutation: %v", err)
@@ -449,16 +478,25 @@ func (n *node) applyAllMarks(ctx context.Context) {
 	n.Applied.WaitForMark(ctx, lastIndex)
 }
 
-func (n *node) retrieveSnapshot() error {
+func (n *node) leaderBlocking() (*conn.Pool, error) {
 	pool := groups().Leader(groups().groupId())
 	if pool == nil {
-		// retrieveSnapshot is blocking at initial start and leader election for a group might
-		// not have happened when it is called. If we can't find a leader, get latest state from
+		// Functions like retrieveSnapshot and joinPeers are blocking at initial start and
+		// leader election for a group might not have happened when it is called. If we can't
+		// find a leader, get latest state from
 		// Zero.
 		if err := UpdateMembershipState(context.Background()); err != nil {
-			return fmt.Errorf("Error while trying to update membership state: %+v", err)
+			return nil, fmt.Errorf("Error while trying to update membership state: %+v", err)
 		}
-		return fmt.Errorf("Unable to reach leader in group %d", n.gid)
+		return nil, fmt.Errorf("Unable to reach leader in group %d", n.gid)
+	}
+	return pool, nil
+}
+
+func (n *node) retrieveSnapshot() error {
+	pool, err := n.leaderBlocking()
+	if err != nil {
+		return err
 	}
 
 	// Wait for watermarks to sync since populateShard writes directly to db, otherwise
@@ -482,6 +520,83 @@ func (n *node) retrieveSnapshot() error {
 	return nil
 }
 
+type linReadReq struct {
+	// A one-shot chan which we send a raft index upon
+	indexCh chan<- uint64
+}
+
+func (n *node) readIndex(ctx context.Context) (chan uint64, error) {
+	ch := make(chan uint64, 1)
+	select {
+	case n.requestCh <- linReadReq{ch}:
+		return ch, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+func (n *node) runReadIndexLoop(closer *y.Closer, readStateCh <-chan raft.ReadState) {
+	defer closer.Done()
+	requests := []linReadReq{}
+	// We maintain one linearizable ReadIndex request at a time.  Others wait queued behind
+	// requestCh.
+	for {
+		select {
+		case <-closer.HasBeenClosed():
+			return
+		case <-readStateCh:
+			// Do nothing, discard ReadState as we don't have any pending ReadIndex requests.
+		case req := <-n.requestCh:
+		slurpLoop:
+			for {
+				requests = append(requests, req)
+				select {
+				case req = <-n.requestCh:
+				default:
+					break slurpLoop
+				}
+			}
+			activeRctx := make([]byte, 8)
+			x.Check2(n.rand.Read(activeRctx[:]))
+			// To see if the ReadIndex request succeeds, we need to use a timeout and wait for a
+			// successful response.  If we don't see one, the raft leader wasn't configured, or the
+			// raft leader didn't respond.
+
+			// This is supposed to use context.Background().  We don't want to cancel the timer
+			// externally.  We want equivalent functionality to time.NewTimer.
+			// TODO: Second is high, if a node gets partitioned we would have to throw error sooner.
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			err := n.Raft().ReadIndex(ctx, activeRctx[:])
+			if err != nil {
+				for _, req := range requests {
+					req.indexCh <- raft.None
+				}
+				continue
+			}
+		again:
+			select {
+			case <-closer.HasBeenClosed():
+				cancel()
+				return
+			case rs := <-readStateCh:
+				if 0 != bytes.Compare(activeRctx[:], rs.RequestCtx) {
+					goto again
+				}
+				cancel()
+				index := rs.Index
+				for _, req := range requests {
+					req.indexCh <- index
+				}
+			case <-ctx.Done():
+				for _, req := range requests {
+					req.indexCh <- raft.None
+				}
+			}
+			requests = requests[:0]
+		}
+	}
+}
+
 func (n *node) Run() {
 	firstRun := true
 	var leader bool
@@ -492,8 +607,16 @@ func (n *node) Run() {
 	x.Check(err)
 
 	// Ensure we don't exit unless any snapshot in progress in done.
-	closer := y.NewCloser(1)
+	closer := y.NewCloser(2)
 	go n.snapshotPeriodically(closer)
+	// This chan could have capacity zero, because runReadIndexLoop never blocks without selecting
+	// on readStateCh.  It's 2 so that sending rarely blocks (so the Go runtime doesn't have to
+	// switch threads as much.)
+	readStateCh := make(chan raft.ReadState, 2)
+
+	// We only stop runReadIndexLoop after the for loop below has finished interacting with it.
+	// That way we know sending to readStateCh will not deadlock.
+	go n.runReadIndexLoop(closer, readStateCh)
 
 	for {
 		select {
@@ -501,6 +624,10 @@ func (n *node) Run() {
 			n.Raft().Tick()
 
 		case rd := <-n.Raft().Ready():
+			for _, rs := range rd.ReadStates {
+				readStateCh <- rs
+			}
+
 			if rd.SoftState != nil {
 				groups().triggerMembershipSync()
 				leader = rd.RaftState == raft.StateLeader
@@ -670,7 +797,7 @@ func (n *node) snapshot(skip uint64) {
 	x.Checkf(err, "Unable to get existing snapshot")
 
 	lastSnapshotIdx := existing.Metadata.Index
-	x.Printf("In snapshot, txn: [%v], lastSnapshot: [%v], applied: [%v]\n", txnWatermark, lastSnapshotIdx, n.Applied.DoneUntil())
+	x.Write(fmt.Sprintf("In snapshot, txn: [%v], lastSnapshot: [%v], applied: [%v]\n", txnWatermark, lastSnapshotIdx, n.Applied.DoneUntil()))
 	if txnWatermark <= lastSnapshotIdx+skip {
 		appliedWatermark := n.Applied.DoneUntil()
 		// If difference grows above 1.5 * ForceAbortDifference we try to abort old transactions
@@ -704,13 +831,9 @@ func (n *node) snapshot(skip uint64) {
 }
 
 func (n *node) joinPeers() error {
-	// Get leader information for MY group.
-	pl := groups().Leader(n.gid)
-	if pl == nil {
-		if err := UpdateMembershipState(context.Background()); err != nil {
-			return fmt.Errorf("Error while trying to update membership state: %+v", err)
-		}
-		return x.Errorf("Unable to reach leader or any other server in group %d", n.gid)
+	pl, err := n.leaderBlocking()
+	if err != nil {
+		return err
 	}
 
 	gconn := pl.Get()
@@ -721,6 +844,24 @@ func (n *node) joinPeers() error {
 	}
 	x.Printf("Done with JoinCluster call\n")
 	return nil
+}
+
+// Checks if its a peer from the leader of the group.
+func (n *node) isMember() (bool, error) {
+	pl, err := n.leaderBlocking()
+	if err != nil {
+		return false, err
+	}
+
+	gconn := pl.Get()
+	c := intern.NewRaftClient(gconn)
+	x.Printf("Calling IsPeer")
+	pr, err := c.IsPeer(n.ctx, n.RaftContext)
+	if err != nil {
+		return false, x.Errorf("Error while joining cluster: %+v\n", err)
+	}
+	x.Printf("Done with IsPeer call\n")
+	return pr.Status, nil
 }
 
 func (n *node) retryUntilSuccess(fn func() error, pause time.Duration) {
@@ -740,6 +881,19 @@ func (n *node) InitAndStartNode(wal *raftwal.Wal) {
 	x.Check(err)
 	n.Applied.SetDoneUntil(idx)
 	posting.TxnMarks().SetDoneUntil(idx)
+
+	if _, hasPeer := groups().MyPeer(); !restart && hasPeer {
+		// The node has other peers, it might have crashed after joining the cluster and before
+		// writing a snapshot. Check from leader, if it is part of the cluster. Consider this a
+		// restart if it is part of the cluster, else start a new node.
+		for {
+			if restart, err = n.isMember(); err == nil {
+				break
+			}
+			x.Printf("Error while calling hasPeer: %v. Retrying...\n", err)
+			time.Sleep(time.Second)
+		}
+	}
 
 	if restart {
 		x.Printf("Restarting node for group: %d\n", n.gid)
@@ -774,6 +928,29 @@ func (n *node) InitAndStartNode(wal *raftwal.Wal) {
 	go n.processApplyCh()
 	go n.Run()
 	go n.BatchAndSendMessages()
+}
+
+var (
+	errReadIndex = x.Errorf("cannot get linerized read (time expired or no configured leader)")
+)
+
+func (n *node) WaitLinearizableRead(ctx context.Context) error {
+	replyCh, err := n.readIndex(ctx)
+	if err != nil {
+		return err
+	}
+	select {
+	case index := <-replyCh:
+		if index == raft.None {
+			return errReadIndex
+		}
+		if err := n.Applied.WaitForMark(ctx, index); err != nil {
+			return err
+		}
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (n *node) AmLeader() bool {

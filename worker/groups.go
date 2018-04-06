@@ -23,6 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"golang.org/x/net/context"
 
 	"github.com/dgraph-io/badger"
@@ -93,16 +95,20 @@ func StartRaftNodes(walStore *badger.ManagedDB, bindall bool) {
 	var connState *intern.ConnectionState
 	m := &intern.Member{Id: Config.RaftId, Addr: Config.MyAddr}
 	delay := 50 * time.Millisecond
-	for i := 0; i < 9; i++ { // Generous number of attempts.
-		var err error
+	maxHalfDelay := 15 * time.Second
+	var err error
+	for { // Keep on retrying. See: https://github.com/dgraph-io/dgraph/issues/2289
 		connState, err = zc.Connect(gr.ctx, m)
-		if err == nil {
+		if err == nil || grpc.ErrorDesc(err) == x.ErrReuseRemovedId.Error() {
 			break
 		}
 		x.Printf("Error while connecting with group zero: %v", err)
 		time.Sleep(delay)
-		delay *= 2
+		if delay <= maxHalfDelay {
+			delay *= 2
+		}
 	}
+	x.CheckfNoTrace(err)
 	if connState.GetMember() == nil || connState.GetState() == nil {
 		x.Fatalf("Unable to join cluster via dgraphzero")
 	}
@@ -646,13 +652,19 @@ func (g *groupi) proposeDelta(oracleDelta *intern.OracleDelta) {
 	if !g.Node.AmLeader() {
 		return
 	}
-	// TODO (pawan) - All servers open a stream with Zero and processDelta. Why do we still have to
-	// propose these updates then?
-
 	x.Write(fmt.Sprintf("oracleDelta: %v\n", oracleDelta))
+
+	// Only the leader of a group proposes the commit proposal for a group after getting delta from
+	// Zero.
 	for startTs, commitTs := range oracleDelta.Commits {
+		// The leader might not have yet applied the mutation and hence may not have the txn in the
+		// map. Its ok we can just continue, processOracleDeltaStream checks the oracle map every
+		// minute and calls proposeDelta.
 		if posting.Txns().Get(startTs) == nil {
 			x.Write(fmt.Sprintf("Continue in commits: %v\n", startTs))
+			// Don't mark oracle as done here as then it would be deleted the entry from map and it
+			// won't be proposed to the group. This could eventually block snapshots from happening
+			// in a replicated cluster.
 			continue
 		}
 		tctx := &api.TxnContext{StartTs: startTs, CommitTs: commitTs}

@@ -139,7 +139,6 @@ func (s *scheduler) schedule(proposal *intern.Proposal, index uint64) (err error
 		return err
 	}
 
-	x.AssertTruef(proposal.Mutations.StartTs != 0, "mu: %+v\n", proposal.Mutations)
 	if proposal.Mutations.StartTs == 0 {
 		posting.TxnMarks().Done(index)
 		return errors.New("StartTs must be provided.")

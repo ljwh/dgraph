@@ -1767,10 +1767,7 @@ Query Example: Predicates saved to a variable and queried with `expand()`.
   director(func: eq(name@en, "Lost in Translation")) {
     name@.
     expand(val(pred)) {
-      expand(_all_) {
-        name@.
-        uid
-      }
+      expand(_all_)
     }
   }
 }
@@ -1932,6 +1929,11 @@ For all triples with a predicate of scalar types the object is a literal.
 |  `dateTime` | time.Time (RFC3339 format [Optional timezone] eg: 2006-01-02T15:04:05.999999999+10:00 or 2006-01-02T15:04:05.999999999)    |
 |  `geo`      | [go-geom](https://github.com/twpayne/go-geom)    |
 |  `password` | string (encrypted) |
+
+
+{{% notice "note" %}}Dgraph supports date and time formats for `dateTime` scalar type only if they
+are RFC 3339 compatible which is different from ISO 8601(as defined in the RDF spec). You should
+convert your values to RFC 3339 format before sending them to Dgraph.{{% /notice  %}}
 
 #### UID Type
 
@@ -2182,6 +2184,10 @@ schema {
   index
   reverse
   tokenizer
+  list
+  count
+  upsert
+  lang
 }
 ```
 
@@ -2193,6 +2199,10 @@ schema(pred: [name, friend]) {
   index
   reverse
   tokenizer
+  list
+  count
+  upsert
+  lang
 }
 ```
 
@@ -2800,6 +2810,12 @@ query test($a: int = 2, $b: int!, $name: string) {
   }
 }
 {{< /runnable >}}
+
+
+{{% notice "note" %}}
+If you want to input a list of uids as a GraphQL variable value, you can have the variable as string type and
+have the value surrounded by square brackets like `["13", "14"]`.
+{{% /notice %}}
 
 ## Indexing with Custom Tokenizers
 
