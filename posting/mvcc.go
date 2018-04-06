@@ -111,7 +111,7 @@ func (t *transactions) TxnsSinceSnapshot(pending uint64) []uint64 {
 	})
 
 	for i := 0; i < len(timestamps); i++ {
-		fmt.Printf("last ts: %+v, idx: %+v\n", timestamps[i], t.m[timestamps[i]].startIdx())
+		x.Write(fmt.Sprintf("last ts: %+v, idx: %+v\n", timestamps[i], t.m[timestamps[i]].startIdx()))
 	}
 	return timestamps
 }
