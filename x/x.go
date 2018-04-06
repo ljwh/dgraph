@@ -85,6 +85,10 @@ type queryRes struct {
 	Errors []errRes `json:"errors"`
 }
 
+func Write(s string) {
+	debugLog.WriteString(s)
+}
+
 // SetError sets the error logged in this package.
 func SetError(prev *error, n error) {
 	if prev == nil {

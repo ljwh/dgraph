@@ -140,7 +140,13 @@ func (st *state) serveGRPC(l net.Listener, wg *sync.WaitGroup) {
 	}()
 }
 
+var debugLog *os.File
+
 func run() {
+	var err error
+	debugLog, err = os.Create("zero-debug.log")
+	x.Check(err)
+
 	opts = options{
 		bindall:           Zero.Conf.GetBool("bindall"),
 		myAddr:            Zero.Conf.GetString("my"),

@@ -648,11 +648,11 @@ func (g *groupi) proposeDelta(oracleDelta *intern.OracleDelta) {
 	}
 	// TODO (pawan) - All servers open a stream with Zero and processDelta. Why do we still have to
 	// propose these updates then?
-	x.Printf("oracleDelta: %v\n", oracleDelta)
+
+	x.Write(fmt.Sprintf("oracleDelta: %v\n", oracleDelta))
 	for startTs, commitTs := range oracleDelta.Commits {
 		if posting.Txns().Get(startTs) == nil {
-			x.Printf("Continue in commits: %v\n", startTs)
-			posting.Oracle().Done(startTs)
+			x.Write(fmt.Sprintf("Continue in commits: %v\n", startTs))
 			continue
 		}
 		tctx := &api.TxnContext{StartTs: startTs, CommitTs: commitTs}
@@ -660,8 +660,7 @@ func (g *groupi) proposeDelta(oracleDelta *intern.OracleDelta) {
 	}
 	for _, startTs := range oracleDelta.Aborts {
 		if posting.Txns().Get(startTs) == nil {
-			x.Printf("Continue in abort: %v\n", startTs)
-			posting.Oracle().Done(startTs)
+			x.Write(fmt.Sprintf("Continue in abort: %v\n", startTs))
 			continue
 		}
 		tctx := &api.TxnContext{StartTs: startTs}

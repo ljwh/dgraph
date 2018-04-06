@@ -19,6 +19,8 @@ package x
 import (
 	"fmt"
 	"os"
+
+	"github.com/dgraph-io/dgo/x"
 )
 
 var (
@@ -46,8 +48,13 @@ func AddInit(f func()) {
 	initFunc = append(initFunc, f)
 }
 
+var debugLog *os.File
+
 // Init initializes flags and run all functions in initFunc.
 func Init(debug bool) {
+	var err error
+	debugLog, err = os.Create("server-debug.log")
+	x.Check(err)
 	Config.DebugMode = debug
 	// Default value, would be overwritten by flag.
 	Config.QueryEdgeLimit = 1e6

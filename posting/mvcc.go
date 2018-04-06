@@ -187,7 +187,7 @@ func (t *Txn) done() {
 	defer t.Unlock()
 	// All indices should have been added by now.
 	TxnMarks().DoneMany(t.Indices)
-	x.Println("Done: ", t.StartTs, ", indices:", t.Indices)
+	x.Write(fmt.Sprintf("Done: ", t.StartTs, ", indices:", t.Indices))
 }
 
 // LastIndex returns the index of last prewrite proposal associated with

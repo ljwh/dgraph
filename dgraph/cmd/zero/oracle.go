@@ -19,6 +19,7 @@ package zero
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -209,11 +210,11 @@ func (o *Oracle) updateCommitStatusHelper(index uint64, src *api.TxnContext) boo
 	o.Lock()
 	defer o.Unlock()
 	if _, ok := o.commits[src.StartTs]; ok {
-		x.Printf("return false commits: [%v]\n", src.StartTs)
+		debugLog.WriteString(fmt.Sprintf("return false commits: [%v]\n", src.StartTs))
 		return false
 	}
 	if _, ok := o.aborts[src.StartTs]; ok {
-		x.Printf("return false aborts: [%v]\n", src.StartTs)
+		debugLog.WriteString(fmt.Sprintf("return false aborts: [%v]\n", src.StartTs))
 		return false
 	}
 	if src.Aborted {
@@ -228,7 +229,7 @@ func (o *Oracle) updateCommitStatusHelper(index uint64, src *api.TxnContext) boo
 
 func (o *Oracle) updateCommitStatus(index uint64, src *api.TxnContext) {
 	if o.updateCommitStatusHelper(index, src) {
-		x.Printf("add to Delta: [%v]", src)
+		debugLog.WriteString(fmt.Sprintf("add to Delta: [%v]", src))
 		delta := new(intern.OracleDelta)
 		if src.Aborted {
 			delta.Aborts = append(delta.Aborts, src.StartTs)
