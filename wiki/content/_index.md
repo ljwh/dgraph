@@ -1,48 +1,87 @@
 +++
 date = "2017-03-20T19:35:35+11:00"
 title = "Dgraph Documentation"
+aliases = ["/contribute"]
+[menu.main]
+  url = "/"
+  name = "Home"
+  identifier = "home"
+  weight = 1
 +++
 
 **Welcome to the official Dgraph documentation.**
 
-Dgraph is an open source, scalable, distributed, highly available and fast graph database, designed from ground up to be run in production.
+Designed from the ground up to be run in production, Dgraph is the native GraphQL database with a graph backend. It is open-source, scalable, distributed, highly available and lightning fast.
 
 ## Using Dgraph
 
 <section class="toc">
   <div class="container">
     <div class="row row-no-padding">
-
       <div class="col-12 col-sm-6">
         <div class="section-item">
           <div class="section-name">
-            <a href="https://tour.dgraph.io" target="_blank">
-              Tour of Dgraph
+            <a href="{{< relref "graphql/overview/index.md">}}">
+              GraphQL
             </a>
           </div>
           <p class="section-desc">
-            Take an interactive tour of Dgraph to learn the concepts.
+            Get Started with GraphQL 
           </p>
         </div>
       </div>
-
+      <div class="col-12 col-sm-6">
+        <div class="section-item">
+          <div class="section-name">
+            <a href="{{< relref "slash-graphql/introduction.md">}}">
+              Slash GraphQL
+            </a>
+          </div>
+          <p class="section-desc">
+            Slash GraphQL Provides /graphql Backend for Your App
+          </p>
+        </div>
+      </div>
       <div class="col-12 col-sm-6">
         <div class="section-item">
           <div class="section-name">
             <a href="{{< relref "get-started/index.md">}}">
-              Get Started
+              Quickstart Guide
             </a>
           </div>
           <p class="section-desc">
-            Install Dgraph and run a query in 7 minutes.
+            A single page quickstart guide to get started with Dgraph
           </p>
         </div>
       </div>
-
       <div class="col-12 col-sm-6">
         <div class="section-item">
           <div class="section-name">
-            <a href="{{< relref "query-language/index.md">}}">
+            <a href="https://dgraph.io/tour/" target="_blank">
+              Tour of Dgraph
+            </a>
+          </div>
+          <p class="section-desc">
+            Take an interactive tour of Dgraph to learn the concepts
+          </p>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6">
+        <div class="section-item">
+          <div class="section-name">
+            <a href="{{< relref "tutorials/index.md">}}">
+              Tutorials - Get Started with Dgraph
+            </a>
+          </div>
+          <p class="section-desc">
+            Get Started with Dgraph alongside a series of tutorials
+          </p>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6">
+        <div class="section-item">
+          <div class="section-name">
+            <a href="{{< relref "query-language/_index.md">}}">
               Query Language
             </a>
           </div>
@@ -51,11 +90,22 @@ Dgraph is an open source, scalable, distributed, highly available and fast graph
           </p>
         </div>
       </div>
-
       <div class="col-12 col-sm-6">
         <div class="section-item">
           <div class="section-name">
-            <a href="{{< relref "clients/index.md">}}">
+            <a href="{{< relref "tips/index.md">}}">
+              GraphQL+- Tips and Tricks
+            </a>
+          </div>
+          <p class="section-desc">
+            A list of commonly used GraphQL+- query snippets
+          </p>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6">
+        <div class="section-item">
+          <div class="section-name">
+            <a href="{{< relref "clients/_index.md">}}">
               Clients
             </a>
           </div>
@@ -64,11 +114,10 @@ Dgraph is an open source, scalable, distributed, highly available and fast graph
           </p>
         </div>
       </div>
-
       <div class="col-12 col-sm-6">
         <div class="section-item">
           <div class="section-name">
-            <a href="{{< relref "deploy/index.md">}}">
+            <a href="{{< relref "deploy/_index.md">}}">
               Deploy
             </a>
           </div>
@@ -77,11 +126,22 @@ Dgraph is an open source, scalable, distributed, highly available and fast graph
           </p>
         </div>
       </div>
-
       <div class="col-12 col-sm-6">
         <div class="section-item">
           <div class="section-name">
-            <a href="{{< relref "faq/index.md">}}">
+            <a href="{{< relref "enterprise-features/_index.md">}}">
+              Enterprise Features
+            </a>
+          </div>
+          <p class="section-desc">
+            Exclusive features like ACLs, binary backups, encryption at rest, and more
+          </p>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6">
+        <div class="section-item">
+          <div class="section-name">
+            <a href="/faq">
               FAQ
             </a>
           </div>
@@ -90,19 +150,19 @@ Dgraph is an open source, scalable, distributed, highly available and fast graph
           </p>
         </div>
       </div>
-
     </div>
   </div>
 </section>
 
 ## Contribute
+
 <section class="toc">
   <div class="container">
     <div class="row row-no-padding">
       <div class="col-12 col-sm-6">
         <div class="section-item">
           <div class="section-name">
-            <a href="{{< relref "contribute/index.md">}}">
+            <a href="https://github.com/dgraph-io/dgraph/blob/master/CONTRIBUTING.md">
               Contribute to Dgraph
             </a>
           </div>
@@ -117,7 +177,7 @@ Dgraph is an open source, scalable, distributed, highly available and fast graph
 
 ## Our Community
 
-**Dgraph is made better everyday by the growing community and the contributors all over the world.**
+**Dgraph is made better every day by the growing community and the contributors all over the world.**
 
 <section class="toc">
   <div class="container">
@@ -125,31 +185,18 @@ Dgraph is an open source, scalable, distributed, highly available and fast graph
       <div class="col-12 col-sm-6">
         <div class="section-item">
           <div class="section-name">
-            <a href="https://slack.dgraph.io">
-              Slack
-            </a>
-          </div>
-          <p class="section-desc">
-            Chat instantly to the Dgraph community and engineers.
-          </p>
-        </div>
-      </div>
-      <div class="col-12 col-sm-6">
-        <div class="section-item">
-          <div class="section-name">
             <a href="https://discuss.dgraph.io">
-              Forum
+              Community
             </a>
           </div>
           <p class="section-desc">
-            Discuss Dgraph on the official forum.
+            Discuss Dgraph on the official community.
           </p>
         </div>
       </div>
     </div>
   </div>
 </section>
-
 
 ## Demo
 

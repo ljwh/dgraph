@@ -1,6 +1,10 @@
 +++
 date = "2017-03-20T19:35:35+11:00"
 title = "FAQ"
+[menu.main]
+  url = "/faq/"
+  identifier = "faq"
+  weight = 10
 +++
 
 ## General
@@ -16,15 +20,11 @@ If you're interested in a high-performance graph database with an emphasis on so
 
 If you're running more than five tables in a traditional relational database management system such as MySQL, SQL Server, or Oracle and your application requires five or more foreign keys, a graph database may be a better fit. If you're running a NoSQL database like MongoDB or Cassandra forcing you to do joins in the application layer, you should definitely take a look at moving to a graph database.
 
-While we absolutely believe in Dgraph it's important to remember it's still young. At this stage it's ideal for internal non-user facing projects as well as for projects that you've found impossible to realize in the past due to the complexity and computational cost imposed by classic table driven systems, endless joins, or the seemingly inescapable ''curse of dimensionality''.
-
 ### Why would I not use Dgraph?
-If you're looking for a stable, mature database, Dgraph wouldn't be the right fit for you. It is at an early stage, where a lot of functionality is still being worked on, and releases might not be backward compatible.
-
-Another thing is, if your data doesn't have graph structure, i.e., there's only one predicate, then any graph database might not be a good fit for you. A NoSQL datastore is best for key-value type storage.
+If your data doesn't have graph structure, i.e., there's only one predicate, then any graph database might not be a good fit for you. A NoSQL datastore is best for key-value type storage.
 
 ### Is Dgraph production ready?
-We recommend Dgraph to be used in production at companies. Minor releases at this stage might not be backward compatible; so we highly recommend using [frequent exports]({{< relref "deploy/index.md#export" >}}).
+We recommend Dgraph to be used in production at companies. Minor releases at this stage might not be backward compatible; so we highly recommend using [frequent exports](/deploy/dgraph-administration/#exporting-database).
 
 ### Is Dgraph fast?
 Every other graph system that we've run it against, Dgraph has been at least a 10x factor faster. It only goes up from there. But, that's anecdotal observations.
@@ -38,25 +38,7 @@ Here are some actual benchmarks:
 
 ### How is Dgraph Licensed?
 
-Dgraph is licensed under Apache v2.0 with a Commons Clause restriction. The full text of the license can be found [here](https://github.com/dgraph-io/dgraph/blob/master/LICENSE.md).
-
-### How does Commons Clause restriction affect me?
-
-The Commons Clause restriction has NO impact on you, if:
-
-- You are using Dgraph internally within your organization.
-- You are building and/or selling a service on top of Dgraph, which is
-  substantially different from Dgraph itself.
-- You do not intend to sell Dgraph as a service, or as a product.
-- You are using a Dgraph library.
-
-The clause only applies to you, if:
-
-- You intend to sell Dgraph as a software or in the cloud, without significantly
-  modifying the codebase.
-
-If you wish to provide Dgraph as a service, [talk to
-us](mailto:contact@dgraph.io).
+Dgraph is licensed under Apache v2.0. The full text of the license can be found [here](https://github.com/dgraph-io/dgraph/blob/master/LICENSE.md).
 
 ## Internals
 
@@ -65,8 +47,10 @@ Dgraph v0.8 and above uses [Badger](https://github.com/dgraph-io/badger), a pers
 
 Dgraph v0.7.x and below used RocksDB for the key-value store. RocksDB is written in C++ and requires [cgo](https://golang.org/cmd/cgo/) to work with Dgraph, which caused several problems. You can read more about it in [this blog post](https://open.dgraph.io/post/badger/).
 
-### Why doesn't Dgraph use BoltDB?
-BoltDB depends on a single global <code>RWMutex</code> lock for all reads and writes; this negatively affects concurrency of iteration and modification of posting lists for Dgraph. For this reason, we decided not to use it and instead use RocksDB. On the other hand, RocksDB supports concurrent writes and is being used in production both at Google and Facebook.
+### Why doesn't Dgraph use BoltDB or RocksDB?
+BoltDB depends on a single global <code>RWMutex</code> lock for all reads and writes; this negatively affects concurrency of iteration and modification of posting lists for Dgraph. For this reason, we decided at that time not to use it and instead use RocksDB. On the other hand, RocksDB supports concurrent writes and is being used in production both at Google and Facebook.
+
+Today we use [Badger](https://github.com/dgraph-io/badger), an efficient and persistent key-value database we built that's written in Go. Our blog covers our rationale for choosing Badger in ["Why we choose Badger over RocksDB in Dgraph"](https://blog.dgraph.io/post/badger-over-rocksdb-in-dgraph/). Today, Badger is used in Dgraph as well as [many other projects](https://github.com/dgraph-io/badger#other-projects-using-badger).
 
 ### Can Dgraph run on other databases, like Cassandra, MySQL, etc.?
 No. Dgraph stores and handles data natively to ensure it has complete control over performance and latency. The only thing between Dgraph and disk is the key-value application library, [Badger](https://github.com/dgraph-io/badger).
@@ -74,7 +58,7 @@ No. Dgraph stores and handles data natively to ensure it has complete control ov
 ## Languages and Features
 
 ### Does Dgraph support GraphQL?
-Dgraph started with the aim to fully support GraphQL. However, as our experience with the language grew, we started hitting the seams. It couldn't support many of the features required from a language meant to interact with Graph data, and we felt some of the features were unnecessary and complicated. So, we've created a simplified and feature rich version of GraphQL. For lack of better name, we're calling GraphQL+-. You can [read more about it here]({{< relref "query-language/index.md" >}}).
+Dgraph started with the aim to fully support GraphQL. However, as our experience with the language grew, we started hitting the seams. It couldn't support many of the features required from a language meant to interact with Graph data, and we felt some of the features were unnecessary and complicated. So, we've created a simplified and feature rich version of GraphQL. For lack of better name, we're calling GraphQL+-. You can [read more about it here]({{< relref "query-language/_index.md" >}}).
 
 ### When is Dgraph going to support Gremlin?
 Dgraph will aim to support [Gremlin](https://github.com/tinkerpop/gremlin/wiki) after v1.0. However, this is not set in stone. If our community wants Gremlin support to interact with other frameworks, like Tinkerpop, we can look into supporting it earlier.
@@ -83,12 +67,13 @@ Dgraph will aim to support [Gremlin](https://github.com/tinkerpop/gremlin/wiki) 
 If there is a demand for it, Dgraph could support [Cypher](https://neo4j.com/developer/cypher-query-language/). It would most likely be after v1.0.
 
 ### Can Dgraph support X?
-Please see Dgraph [product roadmap](https://github.com/dgraph-io/dgraph/issues/1) of what we're planning to support for v1.0. If `request X` is not part of it, please feel free to start a discussion at [discuss.dgraph.io](https://discuss.dgraph.io), or file a [Github Issue](https://github.com/dgraph-io/dgraph/issues).
+Please see Dgraph [product roadmap](https://github.com/dgraph-io/dgraph/issues/4724) of what we're planning to support. If `request X` is not part of it, please feel free to start a discussion at [discuss.dgraph.io](https://discuss.dgraph.io), or file a [Github Issue](https://github.com/dgraph-io/dgraph/issues).
 
 ## Long Term Plans
 
-### Will Dgraph remain open source?
-Yes. We have 2 versions of Dgraph: Community, which is under open source license. And enterprise, which is closed-source. Unlike other databases, we include running Dgraph distributedly in our community version; because we aim our open source version at young startups, who need to scale as demand grows.
+### Is Dgraph open-core?
+
+Yes. The main core of Dgraph is [under the Apache 2.0 license](https://github.com/dgraph-io/dgraph/blob/master/LICENSE.md). Enterprise features will be released under a proprietary license. Unlike other databases, we include running Dgraph distributedly under an open source license because we want all our users to be able to scale as demand grows.
 
 ### Would Dgraph be well supported?
 Yes. We're VC funded and plan to use the funds for development. We have a dedicated team of really smart engineers working on this as their full-time job. And of course, we're always open to contributions from the wider community.
@@ -97,7 +82,7 @@ Yes. We're VC funded and plan to use the funds for development. We have a dedica
 It's currently too early to say. It's very likely that we will offer commercially licensed plugins and paid support to interested customers. This model would enable us to continue advancing Dgraph while standing by our commitment to keeping the core project free and open.
 
 ### How can I contribute to Dgraph?
-We accept both code and documentation contributions. Please see [link](https://wiki.dgraph.io) for more information about how to contribute.
+We accept both code and documentation contributions. Please see [link](https://github.com/dgraph-io/dgraph/blob/master/CONTRIBUTING.md) for more information about how to contribute.
 
 ## Criticism
 

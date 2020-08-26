@@ -1,0 +1,419 @@
+#######################
+# Input Schema
+#######################
+
+type Post {
+	postID: ID!
+	title: String! @search(by: [term])
+	titleByEverything: String! @search(by: [term,fulltext,trigram,hash])
+	text: String @search(by: [fulltext])
+	tags: [String] @search(by: [trigram])
+	tagsHash: [String] @search(by: [hash])
+	tagsExact: [String] @search(by: [exact])
+	publishByYear: DateTime @search(by: [year])
+	publishByMonth: DateTime @search(by: [month])
+	publishByDay: DateTime @search(by: [day])
+	publishByHour: DateTime @search(by: [hour])
+	publishTimestamp: Int64 @search
+	numViewers: Int64 @search(by: [int64])
+	numLikes: Int @search
+	score: Float @search
+	isPublished: Boolean @search
+	postType: PostType @search
+	postTypeTrigram: PostType @search(by: [trigram])
+	postTypeRegexp: PostType @search(by: [regexp])
+	postTypeExact: PostType @search(by: [exact])
+	postTypeHash: PostType @search(by: [hash])
+	postTypeRegexpExact: PostType @search(by: [exact,regexp])
+	postTypeHashRegexp: PostType @search(by: [hash,regexp])
+	postTypeNone: PostType @search(by: [])
+}
+
+enum PostType {
+	Fact
+	Question
+	Opinion
+}
+
+#######################
+# Extended Definitions
+#######################
+
+"""
+The Int64 scalar type represents a signed 64‐bit numeric non‐fractional value.
+Int64 can currently represent values in range [-(2^53)+1, (2^53)-1] without any error.
+Values out of this range but representable by a signed 64-bit integer, may get coercion error.
+"""
+scalar Int64
+
+scalar DateTime
+
+enum DgraphIndex {
+	int
+	int64
+	float
+	bool
+	hash
+	exact
+	term
+	fulltext
+	trigram
+	regexp
+	year
+	month
+	day
+	hour
+}
+
+input AuthRule {
+	and: [AuthRule]
+	or: [AuthRule]
+	not: AuthRule
+	rule: String
+}
+
+enum HTTPMethod {
+	GET
+	POST
+	PUT
+	PATCH
+	DELETE
+}
+
+enum Mode {
+	BATCH
+	SINGLE
+}
+
+input CustomHTTP {
+	url: String!
+	method: HTTPMethod!
+	body: String
+	graphql: String
+	mode: Mode
+	forwardHeaders: [String!]
+	secretHeaders: [String!]
+	introspectionHeaders: [String!]
+	skipIntrospection: Boolean
+}
+
+directive @hasInverse(field: String!) on FIELD_DEFINITION
+directive @search(by: [DgraphIndex!]) on FIELD_DEFINITION
+directive @dgraph(type: String, pred: String) on OBJECT | INTERFACE | FIELD_DEFINITION
+directive @id on FIELD_DEFINITION
+directive @withSubscription on OBJECT | INTERFACE
+directive @secret(field: String!, pred: String) on OBJECT | INTERFACE
+directive @auth(
+	query: AuthRule,
+	add: AuthRule,
+	update: AuthRule,
+	delete:AuthRule) on OBJECT
+directive @custom(http: CustomHTTP, dql: String) on FIELD_DEFINITION
+directive @remote on OBJECT | INTERFACE
+directive @cascade on FIELD
+
+input IntFilter {
+	eq: Int
+	le: Int
+	lt: Int
+	ge: Int
+	gt: Int
+}
+
+input Int64Filter {
+	eq: Int64
+	le: Int64
+	lt: Int64
+	ge: Int64
+	gt: Int64
+}
+
+input FloatFilter {
+	eq: Float
+	le: Float
+	lt: Float
+	ge: Float
+	gt: Float
+}
+
+input DateTimeFilter {
+	eq: DateTime
+	le: DateTime
+	lt: DateTime
+	ge: DateTime
+	gt: DateTime
+}
+
+input StringTermFilter {
+	allofterms: String
+	anyofterms: String
+}
+
+input StringRegExpFilter {
+	regexp: String
+}
+
+input StringFullTextFilter {
+	alloftext: String
+	anyoftext: String
+}
+
+input StringExactFilter {
+	eq: String
+	le: String
+	lt: String
+	ge: String
+	gt: String
+}
+
+input StringHashFilter {
+	eq: String
+}
+
+#######################
+# Generated Types
+#######################
+
+type AddPostPayload {
+	post(filter: PostFilter, order: PostOrder, first: Int, offset: Int): [Post]
+	numUids: Int
+}
+
+type DeletePostPayload {
+	post(filter: PostFilter, order: PostOrder, first: Int, offset: Int): [Post]
+	msg: String
+	numUids: Int
+}
+
+type UpdatePostPayload {
+	post(filter: PostFilter, order: PostOrder, first: Int, offset: Int): [Post]
+	numUids: Int
+}
+
+#######################
+# Generated Enums
+#######################
+
+enum PostHasFilter {
+	title
+	titleByEverything
+	text
+	tags
+	tagsHash
+	tagsExact
+	publishByYear
+	publishByMonth
+	publishByDay
+	publishByHour
+	publishTimestamp
+	numViewers
+	numLikes
+	score
+	isPublished
+	postType
+	postTypeTrigram
+	postTypeRegexp
+	postTypeExact
+	postTypeHash
+	postTypeRegexpExact
+	postTypeHashRegexp
+	postTypeNone
+}
+
+enum PostOrderable {
+	title
+	titleByEverything
+	text
+	tags
+	tagsHash
+	tagsExact
+	publishByYear
+	publishByMonth
+	publishByDay
+	publishByHour
+	publishTimestamp
+	numViewers
+	numLikes
+	score
+}
+
+#######################
+# Generated Inputs
+#######################
+
+input AddPostInput {
+	title: String!
+	titleByEverything: String!
+	text: String
+	tags: [String]
+	tagsHash: [String]
+	tagsExact: [String]
+	publishByYear: DateTime
+	publishByMonth: DateTime
+	publishByDay: DateTime
+	publishByHour: DateTime
+	publishTimestamp: Int64
+	numViewers: Int64
+	numLikes: Int
+	score: Float
+	isPublished: Boolean
+	postType: PostType
+	postTypeTrigram: PostType
+	postTypeRegexp: PostType
+	postTypeExact: PostType
+	postTypeHash: PostType
+	postTypeRegexpExact: PostType
+	postTypeHashRegexp: PostType
+	postTypeNone: PostType
+}
+
+input PostFilter {
+	postID: [ID!]
+	title: StringTermFilter
+	titleByEverything: StringFullTextFilter_StringHashFilter_StringTermFilter_StringRegExpFilter
+	text: StringFullTextFilter
+	tags: StringRegExpFilter
+	tagsHash: StringHashFilter
+	tagsExact: StringExactFilter
+	publishByYear: DateTimeFilter
+	publishByMonth: DateTimeFilter
+	publishByDay: DateTimeFilter
+	publishByHour: DateTimeFilter
+	publishTimestamp: Int64Filter
+	numViewers: Int64Filter
+	numLikes: IntFilter
+	score: FloatFilter
+	isPublished: Boolean
+	postType: PostType_hash
+	postTypeTrigram: StringRegExpFilter
+	postTypeRegexp: StringRegExpFilter
+	postTypeExact: PostType_exact
+	postTypeHash: PostType_hash
+	postTypeRegexpExact: PostType_exact_StringRegExpFilter
+	postTypeHashRegexp: PostType_hash_StringRegExpFilter
+	postTypeNone: PostType_hash
+	has: PostHasFilter
+	and: PostFilter
+	or: PostFilter
+	not: PostFilter
+}
+
+input PostOrder {
+	asc: PostOrderable
+	desc: PostOrderable
+	then: PostOrder
+}
+
+input PostPatch {
+	title: String
+	titleByEverything: String
+	text: String
+	tags: [String]
+	tagsHash: [String]
+	tagsExact: [String]
+	publishByYear: DateTime
+	publishByMonth: DateTime
+	publishByDay: DateTime
+	publishByHour: DateTime
+	publishTimestamp: Int64
+	numViewers: Int64
+	numLikes: Int
+	score: Float
+	isPublished: Boolean
+	postType: PostType
+	postTypeTrigram: PostType
+	postTypeRegexp: PostType
+	postTypeExact: PostType
+	postTypeHash: PostType
+	postTypeRegexpExact: PostType
+	postTypeHashRegexp: PostType
+	postTypeNone: PostType
+}
+
+input PostRef {
+	postID: ID
+	title: String
+	titleByEverything: String
+	text: String
+	tags: [String]
+	tagsHash: [String]
+	tagsExact: [String]
+	publishByYear: DateTime
+	publishByMonth: DateTime
+	publishByDay: DateTime
+	publishByHour: DateTime
+	publishTimestamp: Int64
+	numViewers: Int64
+	numLikes: Int
+	score: Float
+	isPublished: Boolean
+	postType: PostType
+	postTypeTrigram: PostType
+	postTypeRegexp: PostType
+	postTypeExact: PostType
+	postTypeHash: PostType
+	postTypeRegexpExact: PostType
+	postTypeHashRegexp: PostType
+	postTypeNone: PostType
+}
+
+input PostType_exact {
+	eq: PostType
+	le: PostType
+	lt: PostType
+	ge: PostType
+	gt: PostType
+}
+
+input PostType_exact_StringRegExpFilter {
+	eq: PostType
+	le: PostType
+	lt: PostType
+	ge: PostType
+	gt: PostType
+	regexp: String
+}
+
+input PostType_hash {
+	eq: PostType
+}
+
+input PostType_hash_StringRegExpFilter {
+	eq: PostType
+	regexp: String
+}
+
+input StringFullTextFilter_StringHashFilter_StringTermFilter_StringRegExpFilter {
+	alloftext: String
+	anyoftext: String
+	eq: String
+	allofterms: String
+	anyofterms: String
+	regexp: String
+}
+
+input UpdatePostInput {
+	filter: PostFilter!
+	set: PostPatch
+	remove: PostPatch
+}
+
+#######################
+# Generated Query
+#######################
+
+type Query {
+	getPost(postID: ID!): Post
+	queryPost(filter: PostFilter, order: PostOrder, first: Int, offset: Int): [Post]
+}
+
+#######################
+# Generated Mutations
+#######################
+
+type Mutation {
+	addPost(input: [AddPostInput!]!): AddPostPayload
+	updatePost(input: UpdatePostInput!): UpdatePostPayload
+	deletePost(filter: PostFilter!): DeletePostPayload
+}
+
